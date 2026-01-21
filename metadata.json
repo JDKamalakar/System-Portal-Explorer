@@ -1,0 +1,9 @@
+{
+  "name": "System Portal Explorer",
+  "description": "A comprehensive dashboard demonstrating web-to-system interactions, including file systems, media devices, notifications, and location services, featuring an AI assistant to explain underlying portal technologies.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
