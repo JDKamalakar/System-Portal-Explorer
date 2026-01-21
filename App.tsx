@@ -7,9 +7,17 @@ import { PortalFeature, SystemStatus } from './types';
 const features: PortalFeature[] = [
   { id: 'file', name: 'File Portal', description: 'Trigger the system file selection dialog.', icon: 'fa-solid fa-folder-open', color: 'bg-blue-500' },
   { id: 'fs_open', name: 'File Access API', description: 'Modern fs-access file picker.', icon: 'fa-regular fa-folder-open', color: 'bg-blue-400' },
+  { id: 'pick_zip', name: 'Archive Portal', description: 'Select Zip/Tar/Gz archives.', icon: 'fa-solid fa-file-zipper', color: 'bg-yellow-600' },
+  { id: 'pick_excel', name: 'Office Portal', description: 'Select Spreadsheets/CSV.', icon: 'fa-solid fa-file-csv', color: 'bg-green-600' },
+  { id: 'pick_config', name: 'Config Portal', description: 'Select JSON/XML/YAML configs.', icon: 'fa-solid fa-file-code', color: 'bg-gray-500' },
+  { id: 'pick_image', name: 'Image Portal', description: 'Select generic image files.', icon: 'fa-solid fa-file-image', color: 'bg-purple-600' },
   { id: 'folder', name: 'Folder Portal', description: 'Access local directory structure.', icon: 'fa-solid fa-folder-tree', color: 'bg-emerald-600' },
   { id: 'folder_legacy', name: 'Legacy Folder', description: 'Standard input directory picker.', icon: 'fa-regular fa-folder', color: 'bg-emerald-700' },
   { id: 'save', name: 'Save Portal', description: 'Trigger system save file dialog.', icon: 'fa-solid fa-floppy-disk', color: 'bg-teal-500' },
+  { id: 'share_file', name: 'Share File', description: 'Share a generated file to OS.', icon: 'fa-solid fa-share-from-square', color: 'bg-indigo-600' },
+  { id: 'pip', name: 'PiP Portal', description: 'Toggle Picture-in-Picture video.', icon: 'fa-solid fa-images', color: 'bg-blue-700' },
+  { id: 'protocol', name: 'Protocol', description: 'Register web+nexus handler.', icon: 'fa-solid fa-link', color: 'bg-orange-600' },
+  { id: 'orientation', name: 'Orientation', description: 'Lock screen orientation.', icon: 'fa-solid fa-rotate', color: 'bg-red-500' },
   { id: 'camera', name: 'Media Portal', description: 'Request access to camera/microphone systems.', icon: 'fa-solid fa-camera', color: 'bg-emerald-500' },
   { id: 'notification', name: 'Notification Portal', description: 'Trigger a system-level desktop notification.', icon: 'fa-solid fa-bell', color: 'bg-amber-500' },
   { id: 'location', name: 'Geo Portal', description: 'Bridge to the system GPS/location daemon.', icon: 'fa-solid fa-location-dot', color: 'bg-rose-500' },
@@ -68,11 +76,76 @@ const App: React.FC = () => {
           fileInputRef.current?.click();
           break;
         case 'fs_open':
+        case 'pick_zip':
+        case 'pick_excel':
+        case 'pick_config':
+        case 'pick_image':
           if ('showOpenFilePicker' in window) {
-            const [fileHandle] = await (window as any).showOpenFilePicker();
-            addLog(`File Access Granted: ${fileHandle.name}`);
+            const types = [];
+            if (id === 'pick_zip') types.push({ description: 'Archives', accept: { 'application/zip': ['.zip'], 'application/x-tar': ['.tar'], 'application/gzip': ['.gz'] } });
+            if (id === 'pick_excel') types.push({ description: 'Spreadsheets', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'], 'text/csv': ['.csv'] } });
+            if (id === 'pick_config') types.push({ description: 'Configs', accept: { 'application/json': ['.json'], 'text/xml': ['.xml'], 'text/yaml': ['.yaml', '.yml'] } });
+            if (id === 'pick_image') types.push({ description: 'Images', accept: { 'image/*': ['.png', '.gif', '.jpeg', '.jpg', '.webp'] } });
+
+            const [fileHandle] = await (window as any).showOpenFilePicker({ types });
+            addLog(`${id === 'fs_open' ? 'File' : 'Specialized File'} Access Granted: ${fileHandle.name}`);
           } else {
             addLog("File System Access API (Open) unsupported.");
+          }
+          break;
+        case 'share_file':
+          if (navigator.share) {
+            const blob = new Blob(['System Portal Test File'], { type: 'text/plain' });
+            const file = new File([blob], 'portal_test.txt', { type: 'text/plain' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: 'Portal Share',
+                text: 'Sharing a generated file from System Portal Explorer.'
+              });
+              addLog("File shared via System Share Sheet.");
+            } else {
+              addLog("System does not support file sharing via this API.");
+            }
+          } else {
+            addLog("Web Share API unsupported.");
+          }
+          break;
+        case 'pip':
+          if (videoRef.current && (videoRef.current as any).requestPictureInPicture) {
+            if (document.pictureInPictureElement) {
+              await (document as any).exitPictureInPicture();
+              addLog("Exited Picture-in-Picture.");
+            } else {
+              await (videoRef.current as any).requestPictureInPicture();
+              addLog("Entered Picture-in-Picture mode.");
+            }
+          } else {
+            addLog("PiP API unsupported or video not active.");
+          }
+          break;
+        case 'protocol':
+          if (navigator.registerProtocolHandler) {
+            try {
+              (navigator as any).registerProtocolHandler('web+nexus', window.location.origin + '/?uri=%s');
+              addLog("Requested registry of 'web+nexus' protocol.");
+            } catch (e) {
+              addLog("Protocol handler registration failed (requires HTTPS/Localhost).");
+            }
+          } else {
+            addLog("Protocol Handler API unsupported.");
+          }
+          break;
+        case 'orientation':
+          if ((screen as any).orientation && (screen as any).orientation.lock) {
+            try {
+              await (screen as any).orientation.lock('landscape');
+              addLog("Screen orientation locked to Landscape.");
+            } catch (e) {
+              addLog("Orientation lock failed (may require full screen/mobile).");
+            }
+          } else {
+            addLog("Screen Orientation API unsupported.");
           }
           break;
         case 'folder_legacy':
