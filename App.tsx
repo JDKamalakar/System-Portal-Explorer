@@ -4,7 +4,11 @@ import AIPanel from './components/AIPanel';
 import { PortalFeature, SystemStatus } from './types';
 
 const features: PortalFeature[] = [
-  { id: 'file', name: 'File Portal', description: 'Trigger the system file selection dialog.', icon: 'fa-solid fa-folder-open', color: 'bg-blue-500' },
+  { id: 'folder', name: 'Folder Picker', description: 'Select an entire directory.', icon: 'fa-solid fa-folder-tree', color: 'bg-teal-600' },
+  { id: 'archive', name: 'Archive Only', description: 'Select compressed archive files.', icon: 'fa-solid fa-file-zipper', color: 'bg-amber-600' },
+  { id: 'image', name: 'Image Picker', description: 'Select image files only.', icon: 'fa-solid fa-image', color: 'bg-rose-600' },
+  { id: 'video', name: 'Video Picker', description: 'Select video files only.', icon: 'fa-solid fa-film', color: 'bg-red-600' },
+  { id: 'audio', name: 'Audio Picker', description: 'Select audio files only.', icon: 'fa-solid fa-music', color: 'bg-violet-600' },
   { id: 'camera', name: 'Media Portal', description: 'Request access to camera/microphone systems.', icon: 'fa-solid fa-camera', color: 'bg-emerald-500' },
   { id: 'notification', name: 'Notification Portal', description: 'Trigger a system-level desktop notification.', icon: 'fa-solid fa-bell', color: 'bg-amber-500' },
   { id: 'location', name: 'Geo Portal', description: 'Bridge to the system GPS/location daemon.', icon: 'fa-solid fa-location-dot', color: 'bg-rose-500' },
@@ -27,7 +31,7 @@ const App: React.FC = () => {
   const [log, setLog] = useState<string[]>([]);
   const [isTestingAll, setIsTestingAll] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Replaced generic fileInputRef with dynamic handling
 
   const addLog = (msg: string) => {
     setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 50));
@@ -59,6 +63,28 @@ const App: React.FC = () => {
     };
   }, []);
 
+  const triggerFilePortal = (options: { accept?: string; directory?: boolean } = {}) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    if (options.accept) input.accept = options.accept;
+    if (options.directory) {
+      input.setAttribute('webkitdirectory', '');
+      input.setAttribute('directory', '');
+    }
+
+    input.onchange = (e: any) => {
+      const files = e.target.files;
+      if (files && files.length > 0) {
+        if (options.directory) {
+          addLog(`Folder Selected: ${files.length} files in directory.`);
+        } else {
+          addLog(`File Selected: ${files[0].name} (${(files[0].size / 1024).toFixed(1)} KB)`);
+        }
+      }
+    };
+    input.click();
+  };
+
   const triggerPortal = useCallback(async (id: string) => {
     setActivePortal(id);
     addLog(`Initiating ${id} portal...`);
@@ -66,7 +92,22 @@ const App: React.FC = () => {
     try {
       switch (id) {
         case 'file':
-          fileInputRef.current?.click();
+          triggerFilePortal();
+          break;
+        case 'folder':
+          triggerFilePortal({ directory: true });
+          break;
+        case 'archive':
+          triggerFilePortal({ accept: '.zip,.rar,.7z,.tar,.gz,.bz2' });
+          break;
+        case 'image':
+          triggerFilePortal({ accept: 'image/*' });
+          break;
+        case 'video':
+          triggerFilePortal({ accept: 'video/*' });
+          break;
+        case 'audio':
+          triggerFilePortal({ accept: 'audio/*' });
           break;
         case 'camera':
           const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -134,7 +175,6 @@ const App: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-slate-950 text-slate-100 selection:bg-blue-500/30">
-      <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => addLog(`File: ${e.target.files?.[0]?.name}`)} />
 
       <main className="p-6 lg:p-12 max-w-[1600px] mx-auto w-full">
         {/* Cinematic Header with Elevation */}
@@ -170,8 +210,8 @@ const App: React.FC = () => {
               onClick={testAll}
               disabled={isTestingAll}
               className={`group flex items-center gap-4 px-10 py-5 rounded-3xl font-black text-xs tracking-widest uppercase transition-all shadow-2xl ${isTestingAll
-                  ? 'bg-slate-800 text-slate-500'
-                  : 'bg-gradient-to-br from-blue-600 to-indigo-700 hover:scale-105 hover:shadow-blue-500/40 active:scale-95'
+                ? 'bg-slate-800 text-slate-500'
+                : 'bg-gradient-to-br from-blue-600 to-indigo-700 hover:scale-105 hover:shadow-blue-500/40 active:scale-95'
                 }`}
             >
               <i className={`fa-solid ${isTestingAll ? 'fa-circle-notch fa-spin' : 'fa-bolt'}`}></i>
