@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import PortalCard from './components/PortalCard';
-import AIPanel from './components/AIPanel';
 import { PortalFeature, SystemStatus } from './types';
 
 const features: PortalFeature[] = [
@@ -9,12 +8,17 @@ const features: PortalFeature[] = [
   { id: 'image', name: 'Image Picker', description: 'Select image files only.', icon: 'fa-solid fa-image', color: 'bg-rose-600' },
   { id: 'video', name: 'Video Picker', description: 'Select video files only.', icon: 'fa-solid fa-film', color: 'bg-red-600' },
   { id: 'audio', name: 'Audio Picker', description: 'Select audio files only.', icon: 'fa-solid fa-music', color: 'bg-violet-600' },
+  { id: 'app-selector', name: 'App Selector', description: 'Select an executable application.', icon: 'fa-solid fa-window-maximize', color: 'bg-blue-700' },
+  { id: 'app-list', name: 'App List', description: 'Request list of installed applications.', icon: 'fa-solid fa-list-check', color: 'bg-indigo-700' },
   { id: 'camera', name: 'Media Portal', description: 'Request access to camera/microphone systems.', icon: 'fa-solid fa-camera', color: 'bg-emerald-500' },
+  { id: 'screen-share', name: 'Screen Share', description: 'Start screen sharing session.', icon: 'fa-solid fa-display', color: 'bg-purple-600' },
+  { id: 'screen-record', name: 'Screen Record', description: 'Record screen activity.', icon: 'fa-solid fa-video', color: 'bg-red-700' },
+  { id: 'download', name: 'Download File', description: 'Trigger a file download.', icon: 'fa-solid fa-download', color: 'bg-green-600' },
+  { id: 'device', name: 'Select Device', description: 'Connect to a USB/HID device.', icon: 'fa-solid fa-keyboard', color: 'bg-slate-600' },
   { id: 'notification', name: 'Notification Portal', description: 'Trigger a system-level desktop notification.', icon: 'fa-solid fa-bell', color: 'bg-amber-500' },
   { id: 'location', name: 'Geo Portal', description: 'Bridge to the system GPS/location daemon.', icon: 'fa-solid fa-location-dot', color: 'bg-rose-500' },
   { id: 'share', name: 'Web Share', description: 'Trigger the OS-native sharing sheet.', icon: 'fa-solid fa-share-nodes', color: 'bg-indigo-500' },
   { id: 'clipboard', name: 'Clipboard Portal', description: 'Intervene with the system clipboard.', icon: 'fa-solid fa-clipboard', color: 'bg-cyan-500' },
-  { id: 'screen', name: 'Display Capture', description: 'Request permission to capture system windows.', icon: 'fa-solid fa-display', color: 'bg-purple-500' },
   { id: 'vibration', name: 'Haptic Portal', description: 'Trigger hardware vibration feedback.', icon: 'fa-solid fa-mobile-screen', color: 'bg-orange-500' },
   { id: 'contact', name: 'Contact Picker', description: 'Access the native system contact list.', icon: 'fa-solid fa-address-book', color: 'bg-yellow-600' },
   { id: 'bluetooth', name: 'Bluetooth Bridge', description: 'Trigger the system device pairing dialog.', icon: 'fa-brands fa-bluetooth-b', color: 'bg-blue-600' },
@@ -26,10 +30,8 @@ const features: PortalFeature[] = [
 
 const App: React.FC = () => {
   const [activePortal, setActivePortal] = useState<string | null>(null);
-  const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const [status, setStatus] = useState<SystemStatus>({ online: navigator.onLine, battery: null, memory: null });
   const [log, setLog] = useState<string[]>([]);
-  const [isTestingAll, setIsTestingAll] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   // Replaced generic fileInputRef with dynamic handling
 
@@ -85,6 +87,56 @@ const App: React.FC = () => {
     input.click();
   };
 
+  const triggerAppList = async () => {
+    addLog("Requesting installed application list...");
+    await new Promise(r => setTimeout(r, 800));
+    addLog("Reading /usr/local/bin...");
+    await new Promise(r => setTimeout(r, 600));
+    const apps = ['Firefox', 'Terminal', 'Files', 'Code', 'Spotify', 'Discord'];
+    addLog(`Found ${apps.length} applications: ${apps.join(', ')}`);
+  };
+
+  const triggerScreenRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      addLog("Screen recording started...");
+      // Simulate recording
+      setTimeout(() => {
+        stream.getTracks().forEach(track => track.stop());
+        addLog("Screen recording stopped (Simulated).");
+      }, 3000);
+    } catch (err: any) {
+      addLog(`Recording denied: ${err.message}`);
+    }
+  };
+
+  const triggerDownload = () => {
+    const blob = new Blob(["System Portal Test File"], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `portal_test_${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    addLog("Download triggered.");
+  };
+
+  const triggerDeviceSelect = async () => {
+    if ('hid' in navigator) {
+      try {
+        const devices = await (navigator as any).hid.requestDevice({ filters: [] });
+        if (devices.length > 0) addLog(`Device selected: ${devices[0].productName}`);
+        else addLog("No device selected.");
+      } catch (err: any) {
+        addLog(`Device selection failed: ${err.message}`);
+      }
+    } else {
+      addLog("HID API not supported, simulating device picker...");
+      await new Promise(r => setTimeout(r, 1000));
+      addLog("Device 'Generic USB Controller' selected.");
+    }
+  };
+
   const triggerPortal = useCallback(async (id: string) => {
     setActivePortal(id);
     addLog(`Initiating ${id} portal...`);
@@ -108,6 +160,32 @@ const App: React.FC = () => {
           break;
         case 'audio':
           triggerFilePortal({ accept: 'audio/*' });
+          break;
+        case 'app-selector':
+          triggerFilePortal({ accept: '.exe,.app,.sh,.deb,.rpm,.apk' });
+          break;
+        case 'app-list':
+          triggerAppList();
+          break;
+        case 'screen-share':
+        case 'screen':
+          try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            if (videoRef.current) {
+              videoRef.current.srcObject = stream;
+              videoRef.current.play();
+            }
+            addLog("Screen sharing active.");
+          } catch (err: any) { addLog(`Share denied: ${err.message}`); }
+          break;
+        case 'screen-record':
+          triggerScreenRecording();
+          break;
+        case 'download':
+          triggerDownload();
+          break;
+        case 'device':
+          triggerDeviceSelect();
           break;
         case 'camera':
           const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -162,17 +240,6 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const testAll = async () => {
-    if (isTestingAll) return;
-    setIsTestingAll(true);
-    addLog("--- INITIALIZING FULL DIAGNOSTIC ---");
-    for (const f of features.slice(0, 5)) {
-      await triggerPortal(f.id);
-      await new Promise(r => setTimeout(r, 1000));
-    }
-    setIsTestingAll(false);
-  };
-
   return (
     <div className="relative min-h-screen bg-slate-950 text-slate-100 selection:bg-blue-500/30">
 
@@ -198,26 +265,6 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-6">
-            <button
-              onClick={() => setIsInspectorOpen(true)}
-              className="group flex items-center gap-3 px-8 py-5 rounded-3xl font-bold bg-white/5 border border-white/10 hover:bg-white/10 hover:border-blue-500/30 text-white transition-all shadow-xl hover:-translate-y-2 active:scale-95"
-            >
-              <i className="fa-solid fa-microchip text-blue-400 group-hover:rotate-12 transition-transform"></i>
-              Open Inspector
-            </button>
-
-            <button
-              onClick={testAll}
-              disabled={isTestingAll}
-              className={`group flex items-center gap-4 px-10 py-5 rounded-3xl font-black text-xs tracking-widest uppercase transition-all shadow-2xl ${isTestingAll
-                ? 'bg-slate-800 text-slate-500'
-                : 'bg-gradient-to-br from-blue-600 to-indigo-700 hover:scale-105 hover:shadow-blue-500/40 active:scale-95'
-                }`}
-            >
-              <i className={`fa-solid ${isTestingAll ? 'fa-circle-notch fa-spin' : 'fa-bolt'}`}></i>
-              {isTestingAll ? 'Running...' : 'Force Diagnostic'}
-            </button>
-
             <div className="flex items-center gap-6 bg-black/40 backdrop-blur-3xl px-10 py-5 rounded-3xl border border-white/5 shadow-inner transition-all hover:bg-black/60 hover:-translate-y-1">
               <div className="text-right">
                 <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Battery</div>
@@ -293,13 +340,6 @@ const App: React.FC = () => {
           </div>
         </div>
       </main>
-
-      {/* Slide-out Inspector */}
-      <AIPanel activePortal={activePortal} isOpen={isInspectorOpen} onClose={() => setIsInspectorOpen(false)} />
-
-      {isInspectorOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-40 transition-opacity animate-in fade-in" onClick={() => setIsInspectorOpen(false)} />
-      )}
     </div>
   );
 };
